@@ -11,14 +11,17 @@ import {
   colorizeBlackAndWhitePhoto,
   upscaleImageTo4K,
   restoreOldPhoto,
+  dehazeAndClarifyPhoto,
 } from '@/ai/flows';
 import { useUser, useFirestore, useStorage } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { uploadImage, uploadDataUri } from '@/firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { AdjustmentsPanel, ImageAdjustments, DEFAULT_ADJUSTMENTS } from '@/components/app/adjustments-panel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-export type Tool = 'restore' | 'colorize' | 'upscale' | 'cartoon';
+export type Tool = 'restore' | 'colorize' | 'upscale' | 'cartoon' | 'dehaze';
 
 export default function Home() {
   const [originalImagePreview, setOriginalImagePreview] = useState<string | null>(null);
@@ -26,6 +29,7 @@ export default function Home() {
   const [transformedImage, setTransformedImage] = useState<string | null>(null);
   const [loadingTool, setLoadingTool] = useState<Tool | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [adjustments, setAdjustments] = useState<ImageAdjustments>(DEFAULT_ADJUSTMENTS);
   
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
@@ -110,6 +114,7 @@ export default function Home() {
     setTransformedImage(null);
     setLoadingTool(null);
     setIsUploading(false);
+    setAdjustments(DEFAULT_ADJUSTMENTS);
   }, []);
 
   const handleToolSelect = async (tool: Tool) => {
@@ -164,12 +169,21 @@ export default function Home() {
           result = await transformPhotoIntoCartoon(input);
           setTransformedImage(result.cartoonPhotoDataUri);
           break;
+        case 'dehaze':
+          result = await dehazeAndClarifyPhoto(input);
+          setTransformedImage(result.dehazedPhotoDataUri);
+          break;
       }
 
       if (user && firestore && result) {
         const transformationId = uuidv4();
         const transRef = doc(firestore, 'users', user.uid, 'transformations', transformationId);
-        const rawTransformedUrl = result.restoredPhotoDataUri || result.colorizedPhotoDataUri || result.upscaledPhotoDataUri || result.cartoonPhotoDataUri;
+        const rawTransformedUrl =
+          result.restoredPhotoDataUri ||
+          result.colorizedPhotoDataUri ||
+          result.upscaledPhotoDataUri ||
+          result.cartoonPhotoDataUri ||
+          result.dehazedPhotoDataUri;
         
         let storedImageUrl = rawTransformedUrl;
         // Upload the large base64 data to Firebase Storage to keep Firestore documents lightweight (<1MB)
@@ -217,13 +231,31 @@ export default function Home() {
   return (
     <AppLayout
       sidebar={
-        <div className="flex flex-col gap-8">
-          <ToolPanel 
-            onToolSelect={handleToolSelect} 
-            loadingTool={loadingTool}
-            hasImage={!!storageUrl}
-            disabled={!user || isUserLoading || isUploading}
-          />
+        <div className="flex flex-col gap-6">
+          <Tabs defaultValue="ai" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-3">
+              <TabsTrigger value="ai">AI Enhancers</TabsTrigger>
+              <TabsTrigger value="tuning">Studio Tuning</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="ai" className="m-0 space-y-4">
+              <ToolPanel 
+                onToolSelect={handleToolSelect} 
+                loadingTool={loadingTool}
+                hasImage={!!storageUrl}
+                disabled={!user || isUserLoading || isUploading}
+              />
+            </TabsContent>
+
+            <TabsContent value="tuning" className="m-0 space-y-4">
+              <AdjustmentsPanel
+                adjustments={adjustments}
+                onChange={setAdjustments}
+                disabled={!storageUrl || isUploading}
+              />
+            </TabsContent>
+          </Tabs>
+
           <HistoryPanel />
         </div>
       }
@@ -237,6 +269,7 @@ export default function Home() {
         loadingTool={loadingTool}
         isUploading={isUploading}
         disabled={!user || isUserLoading}
+        adjustments={adjustments}
       />
     </AppLayout>
   );

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wand2, Palette, Expand, Smile } from 'lucide-react';
+import { Wand2, Palette, Expand, Smile, Sun } from 'lucide-react';
 import { type Tool } from '@/app/page';
 
 type ToolPanelProps = {
@@ -17,27 +17,33 @@ const tools: {
   icon: React.ElementType;
 }[] = [
   {
+    id: 'dehaze',
+    name: 'Dehaze & Face Clarifier',
+    description: 'Cuts sun haze, reduces glare, and reveals backlit crowd faces.',
+    icon: Sun,
+  },
+  {
     id: 'restore',
     name: 'Photo Restoration',
-    description: 'Fix cracks, scratches, and fading.',
+    description: 'Fix cracks, scratches, noise, and fading.',
     icon: Wand2,
   },
   {
     id: 'colorize',
     name: 'Colorize Photo',
-    description: 'Bring B&W photos to life with color.',
+    description: 'Vibrant full-spectrum color for B&W and faded shots.',
     icon: Palette,
   },
   {
     id: 'upscale',
     name: '4K Upscaling',
-    description: 'Enhance resolution to 4K quality.',
+    description: 'Enhance micro-details and resolution to 4K.',
     icon: Expand,
   },
   {
     id: 'cartoon',
     name: 'Cartoonize',
-    description: 'Turn your photo into a cartoon.',
+    description: 'Turn your photo into a vibrant cartoon.',
     icon: Smile,
   },
 ];

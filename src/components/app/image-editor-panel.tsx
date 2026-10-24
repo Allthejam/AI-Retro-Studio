@@ -7,6 +7,8 @@ import { ImageUploader } from './image-uploader';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2, RotateCcw, Columns, SlidersHorizontal } from 'lucide-react';
 import type { Tool } from '@/app/page';
+import type { ImageAdjustments } from './adjustments-panel';
+import { DEFAULT_ADJUSTMENTS } from './adjustments-panel';
 
 type ImageEditorPanelProps = {
   originalImage: string | null;
@@ -17,6 +19,7 @@ type ImageEditorPanelProps = {
   loadingTool: Tool | null;
   isUploading?: boolean;
   disabled?: boolean;
+  adjustments?: ImageAdjustments;
 };
 
 export function ImageEditorPanel({
@@ -28,6 +31,7 @@ export function ImageEditorPanel({
   loadingTool,
   isUploading,
   disabled,
+  adjustments = DEFAULT_ADJUSTMENTS,
 }: ImageEditorPanelProps) {
   const [viewMode, setViewMode] = useState<'side' | 'slider'>('side');
   const [sliderPosition, setSliderPosition] = useState<number>(50);
@@ -37,21 +41,116 @@ export function ImageEditorPanel({
   }
 
   const getDownloadFilename = () => {
-    return `transformed-${new Date().getTime()}.png`;
+    return `enhanced-${new Date().getTime()}.png`;
   };
 
+  const getFilterStyle = (adj: ImageAdjustments) => {
+    // Dehaze removes atmospheric haze & glare by increasing contrast and saturation while curbing brightness
+    const effectiveBrightness = adj.brightness - adj.dehaze * 0.12;
+    const effectiveContrast = adj.contrast + adj.dehaze * 0.45;
+    const effectiveSaturation = adj.saturation + adj.dehaze * 0.2;
+
+    const filters: string[] = [
+      `brightness(${effectiveBrightness}%)`,
+      `contrast(${effectiveContrast}%)`,
+      `saturate(${effectiveSaturation}%)`,
+    ];
+
+    if (adj.hue !== 0) {
+      filters.push(`hue-rotate(${adj.hue}deg)`);
+    }
+    if (adj.warmth !== 0) {
+      filters.push(`sepia(${Math.max(0, adj.warmth)}%)`);
+    }
+    return filters.join(' ');
+  };
+
+  const getTransformStyle = (adj: ImageAdjustments) => {
+    if (adj.zoom <= 1) return undefined;
+    return `scale(${adj.zoom}) translate(${adj.panX / adj.zoom}%, ${adj.panY / adj.zoom}%)`;
+  };
+
+  const hasAdjustments = (adj: ImageAdjustments) => {
+    return (
+      adj.brightness !== 100 ||
+      adj.contrast !== 100 ||
+      adj.saturation !== 100 ||
+      adj.dehaze !== 0 ||
+      adj.sharpen !== 0 ||
+      adj.hue !== 0 ||
+      adj.warmth !== 0 ||
+      adj.zoom !== 1 ||
+      adj.panX !== 0 ||
+      adj.panY !== 0
+    );
+  };
+
+  const activeImage = transformedImage || originalImage;
+
   const handleDownload = async () => {
-    if (!transformedImage) return;
+    if (!activeImage) return;
+
+    // If adjustments or zoom are active, bake them into canvas export
+    if (hasAdjustments(adjustments)) {
+      try {
+        const img = new window.Image();
+        img.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = activeImage;
+        });
+
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.filter = getFilterStyle(adjustments);
+          if (adjustments.zoom > 1) {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(adjustments.zoom, adjustments.zoom);
+            ctx.translate(
+              (adjustments.panX / 100) * (canvas.width / adjustments.zoom),
+              (adjustments.panY / 100) * (canvas.height / adjustments.zoom)
+            );
+            ctx.drawImage(img, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+            ctx.restore();
+          } else {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const blobUrl = window.URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = blobUrl;
+              link.download = getDownloadFilename();
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.URL.revokeObjectURL(blobUrl);
+            }
+          }, 'image/png');
+          return;
+        }
+      } catch (e) {
+        console.warn('Canvas export fallback:', e);
+      }
+    }
+
+    // Direct download
     try {
-      if (transformedImage.startsWith('data:')) {
+      if (activeImage.startsWith('data:')) {
         const link = document.createElement('a');
-        link.href = transformedImage;
+        link.href = activeImage;
         link.download = getDownloadFilename();
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       } else {
-        const response = await fetch(transformedImage);
+        const response = await fetch(activeImage);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -63,7 +162,7 @@ export function ImageEditorPanel({
         window.URL.revokeObjectURL(blobUrl);
       }
     } catch {
-      window.open(transformedImage, '_blank');
+      window.open(activeImage, '_blank');
     }
   };
 
@@ -106,13 +205,22 @@ export function ImageEditorPanel({
                 if (t) handleSliderMove(t.clientX, e.currentTarget.getBoundingClientRect());
               }}
             >
-              {/* Enhanced/Transformed Image (Base) */}
-              <Image
-                src={transformedImage}
-                alt="Transformed Enhanced"
-                fill
-                className="object-contain"
-              />
+              {/* Enhanced/Transformed Image (Base) with Real-Time Adjustments */}
+              <div
+                className="relative h-full w-full overflow-hidden"
+                style={{
+                  filter: getFilterStyle(adjustments),
+                  transform: getTransformStyle(adjustments),
+                  transition: 'filter 120ms ease-out, transform 120ms ease-out',
+                }}
+              >
+                <Image
+                  src={transformedImage}
+                  alt="Transformed Enhanced"
+                  fill
+                  className="object-contain"
+                />
+              </div>
 
               {/* Original Image (Clipped overlay) */}
               <div
@@ -192,12 +300,38 @@ export function ImageEditorPanel({
                       </p>
                     </div>
                   ) : transformedImage ? (
-                    <Image
-                      src={transformedImage}
-                      alt="Transformed"
-                      fill
-                      className="object-contain"
-                    />
+                    <div
+                      className="relative h-full w-full overflow-hidden"
+                      style={{
+                        filter: getFilterStyle(adjustments),
+                        transform: getTransformStyle(adjustments),
+                        transition: 'filter 120ms ease-out, transform 120ms ease-out',
+                      }}
+                    >
+                      <Image
+                        src={transformedImage}
+                        alt="Transformed"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                  ) : originalImage ? (
+                    /* If no AI tool run yet, preview real-time adjustments on original */
+                    <div
+                      className="relative h-full w-full overflow-hidden"
+                      style={{
+                        filter: getFilterStyle(adjustments),
+                        transform: getTransformStyle(adjustments),
+                        transition: 'filter 120ms ease-out, transform 120ms ease-out',
+                      }}
+                    >
+                      <Image
+                        src={originalImage}
+                        alt="Preview with adjustments"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
                   ) : (
                     <p className="p-8 text-center text-muted-foreground">
                       {isUploading 
@@ -222,10 +356,10 @@ export function ImageEditorPanel({
           New Image
         </Button>
 
-        {transformedImage && !loading && (
+        {activeImage && !loading && (
           <Button onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
-            Download Result
+            Download {transformedImage ? 'Result' : 'Enhanced Image'}
           </Button>
         )}
       </div>
