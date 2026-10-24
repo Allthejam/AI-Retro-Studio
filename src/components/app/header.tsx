@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AppLogo } from '@/components/app/icons';
 import { Skeleton } from '../ui/skeleton';
+import { PwaInstallButton } from '@/components/pwa/pwa-install-button';
 
 export function AppHeader() {
   const { user, isUserLoading } = useUser();
@@ -37,7 +38,8 @@ export function AppHeader() {
           <AppLogo className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg font-headline">AI Retro Studio</span>
         </Link>
-        <div className="flex flex-1 items-center justify-end">
+        <div className="flex flex-1 items-center justify-end gap-3">
+          <PwaInstallButton />
           {isUserLoading ? (
             <Skeleton className="h-8 w-8 rounded-full" />
           ) : user ? (
