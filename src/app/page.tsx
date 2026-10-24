@@ -117,6 +117,17 @@ export default function Home() {
     setAdjustments(DEFAULT_ADJUSTMENTS);
   }, []);
 
+  const handleLoadFromHistory = useCallback((imageUrl: string, type: string) => {
+    setOriginalImagePreview(imageUrl);
+    setStorageUrl(imageUrl);
+    setTransformedImage(null);
+    setLoadingTool(null);
+    toast({
+      title: 'Loaded for Editing',
+      description: `Reopened ${type} photo into the editor. You can now apply more AI tools or studio tuning.`,
+    });
+  }, [toast]);
+
   const handleToolSelect = async (tool: Tool) => {
     if (isUploading) {
       toast({
@@ -256,7 +267,7 @@ export default function Home() {
             </TabsContent>
           </Tabs>
 
-          <HistoryPanel />
+          <HistoryPanel onSelectImage={handleLoadFromHistory} />
         </div>
       }
     >
