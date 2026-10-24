@@ -8,20 +8,3 @@ runConfig:
   # Increase the server request timeout to 5 minutes to accommodate
   # potentially long-running AI image generation tasks.
   timeoutSeconds: 300
-
-env:
-  - variable: GEMINI_API_KEY
-    value: AIzaSyC1Va21n6QxGJCmDnW3YPQwSuOk7VRe81E
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: GOOGLE_API_KEY
-    value: AIzaSyC1Va21n6QxGJCmDnW3YPQwSuOk7VRe81E
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: GOOGLE_GENAI_API_KEY
-    value: AIzaSyC1Va21n6QxGJCmDnW3YPQwSuOk7VRe81E
-    availability:
-      - BUILD
-      - RUNTIME
