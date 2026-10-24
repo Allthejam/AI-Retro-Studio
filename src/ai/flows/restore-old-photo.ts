@@ -38,11 +38,14 @@ const restoreOldPhotoFlow = ai.defineFlow(
       prompt: [
         { media: { url: input.photoUrl } },
         {
-          text: 'Carefully analyze this old, damaged photo. Your task is to intelligently repair it by removing all cracks, scratches, and fading. Restore the image to its original, high-quality state without adding new elements or changing the original content. Maintain the original colors and composition as much as possible. Output the restored image as an image.',
+          text: 'Perform dramatic professional photo restoration and remastering on this photo. Deeply clean any noise, blur, dust, scratches, folds, cracks, and imperfections. Sharpen facial details, hair strands, eyes, and surface textures. Enhance dynamic range, contrast, and color vibrance so the photo looks vividly remastered with ultra-clear studio-grade quality while faithfully preserving the subject identity and likeness. Output the restored photo as an image.',
         },
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          imageSize: '2K',
+        },
       },
     });
 

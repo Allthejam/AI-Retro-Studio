@@ -41,10 +41,13 @@ const upscaleImageTo4KFlow = ai.defineFlow(
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         { media: { url: input.photoUrl } },
-        { text: 'Upscale this image, enhancing its resolution, sharpness, and details to achieve a high-definition output, similar to 4K quality, without introducing distortion or artifacts. Preserve the original content and style. Output the upscaled result as an image.' },
+        { text: 'Perform dramatic 4K super-resolution enhancement on this image. Significantly enhance micro-details, ultra-sharp facial features, clear skin textures, sharp hair strands, crisp edges, and vivid lighting. Remove any pixelation, blur, compression artifacts, and digital noise. The resulting image must look dramatically sharper, crisper, and enhanced with cinema-grade high fidelity while keeping subject identity. Output the enhanced image as an image.' },
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          imageSize: '2K',
+        },
       },
     });
 

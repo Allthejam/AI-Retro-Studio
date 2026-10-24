@@ -51,6 +51,9 @@ const transformPhotoIntoCartoonFlow = ai.defineFlow(
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          imageSize: '2K',
+        },
       },
     });
 

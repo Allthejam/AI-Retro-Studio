@@ -47,10 +47,13 @@ const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
             url: photoUrl,
           },
         },
-        {text: 'Colorize this black and white photo, making the colors realistic and natural. Output the resulting colorized photo as an image.'},
+        {text: 'Colorize this photo with rich, vibrant, full-spectrum color. Transform all black, white, sepia, faded, or grayscale areas into realistic, vivid colors: natural warm skin tones, lifelike hair color, vibrant clothing, bright eyes, and richly colored background environment. Ensure the final result is a striking, full-color photograph with clear depth and vibrant saturation. Output the result as an image.'},
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: {
+          imageSize: '2K',
+        },
       },
     });
 
