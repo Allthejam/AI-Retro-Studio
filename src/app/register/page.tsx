@@ -86,7 +86,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm shadow-2xl">
         <CardHeader className="text-center">
             <div className="flex justify-center items-center gap-2 mb-4">
-              <AppLogo className="h-8 w-8 text-primary" />
+              <AppLogo className="h-9 w-9" />
               <span className="font-bold text-2xl font-headline">AI Retro Studio</span>
             </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
