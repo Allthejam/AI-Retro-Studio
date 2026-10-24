@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { ImageUploader } from './image-uploader';
 import { Button } from '@/components/ui/button';
-import { Download, Loader2, RotateCcw, Columns, SlidersHorizontal } from 'lucide-react';
+import { Download, Loader2, RotateCcw, Columns, SlidersHorizontal, Sparkles } from 'lucide-react';
 import type { Tool } from '@/app/page';
 import type { ImageAdjustments } from './adjustments-panel';
 import { DEFAULT_ADJUSTMENTS } from './adjustments-panel';
@@ -85,10 +85,8 @@ export function ImageEditorPanel({
     );
   };
 
-  const activeImage = transformedImage || originalImage;
-
   const handleDownload = async () => {
-    if (!activeImage) return;
+    if (!transformedImage) return;
 
     // If adjustments or zoom are active, bake them into canvas export
     if (hasAdjustments(adjustments)) {
@@ -98,7 +96,7 @@ export function ImageEditorPanel({
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
-          img.src = activeImage;
+          img.src = transformedImage;
         });
 
         const canvas = document.createElement('canvas');
@@ -142,15 +140,15 @@ export function ImageEditorPanel({
 
     // Direct download
     try {
-      if (activeImage.startsWith('data:')) {
+      if (transformedImage.startsWith('data:')) {
         const link = document.createElement('a');
-        link.href = activeImage;
+        link.href = transformedImage;
         link.download = getDownloadFilename();
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       } else {
-        const response = await fetch(activeImage);
+        const response = await fetch(transformedImage);
         const blob = await response.blob();
         const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -162,7 +160,7 @@ export function ImageEditorPanel({
         window.URL.revokeObjectURL(blobUrl);
       }
     } catch {
-      window.open(activeImage, '_blank');
+      window.open(transformedImage, '_blank');
     }
   };
 
@@ -310,34 +308,20 @@ export function ImageEditorPanel({
                     >
                       <Image
                         src={transformedImage}
-                        alt="Transformed"
-                        fill
-                        className="object-contain"
-                      />
-                    </div>
-                  ) : originalImage ? (
-                    /* If no AI tool run yet, preview real-time adjustments on original */
-                    <div
-                      className="relative h-full w-full overflow-hidden"
-                      style={{
-                        filter: getFilterStyle(adjustments),
-                        transform: getTransformStyle(adjustments),
-                        transition: 'filter 120ms ease-out, transform 120ms ease-out',
-                      }}
-                    >
-                      <Image
-                        src={originalImage}
-                        alt="Preview with adjustments"
+                        alt="Transformed Result"
                         fill
                         className="object-contain"
                       />
                     </div>
                   ) : (
-                    <p className="p-8 text-center text-muted-foreground">
-                      {isUploading 
-                        ? "Waiting for cloud sync..." 
-                        : "Select a tool on the left to transform this photo."}
-                    </p>
+                    <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                      <Sparkles className="mb-2 h-8 w-8 text-muted-foreground/30" />
+                      <p className="text-sm font-medium">
+                        {isUploading 
+                          ? 'Syncing to cloud...' 
+                          : 'Select an AI tool on the left to generate your transformed result here.'}
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -356,10 +340,10 @@ export function ImageEditorPanel({
           New Image
         </Button>
 
-        {activeImage && !loading && (
+        {transformedImage && !loading && (
           <Button onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
-            Download {transformedImage ? 'Result' : 'Enhanced Image'}
+            Download Result
           </Button>
         )}
       </div>
