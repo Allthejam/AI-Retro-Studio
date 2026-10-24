@@ -1,14 +1,8 @@
 'use server';
-/**
- * @fileOverview A Genkit flow that transforms an uploaded photo into a stylized illustration or cartoon-like image.
- *
- * - transformPhotoIntoCartoon - A function that handles the photo cartoonization process.
- * - TransformPhotoIntoCartoonInput - The input type for the transformPhotoIntoCartoon function.
- * - TransformPhotoIntoCartoonOutput - The return type for the transformPhotoIntoCartoon function.
- */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {resolveImageMedia} from '@/ai/media-helper';
 
 const TransformPhotoIntoCartoonInputSchema = z.object({
   photoUrl: z
@@ -25,16 +19,11 @@ const TransformPhotoIntoCartoonOutputSchema = z.object({
     .describe(
       "The cartoonized version of the photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  error: z.string().optional(),
 });
 export type TransformPhotoIntoCartoonOutput = z.infer<
   typeof TransformPhotoIntoCartoonOutputSchema
 >;
-
-export async function transformPhotoIntoCartoon(
-  input: TransformPhotoIntoCartoonInput
-): Promise<TransformPhotoIntoCartoonOutput> {
-  return transformPhotoIntoCartoonFlow(input);
-}
 
 const transformPhotoIntoCartoonFlow = ai.defineFlow(
   {
@@ -43,10 +32,12 @@ const transformPhotoIntoCartoonFlow = ai.defineFlow(
     outputSchema: TransformPhotoIntoCartoonOutputSchema,
   },
   async (input) => {
+    const mediaInput = await resolveImageMedia(input.photoUrl);
+
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
-        { media: { url: input.photoUrl } },
+        { media: mediaInput },
         { text: 'Transform this photo into a stylized illustration or a cartoon-like image. Output the result as an image.' },
       ],
       config: {
@@ -68,3 +59,17 @@ const transformPhotoIntoCartoonFlow = ai.defineFlow(
     };
   }
 );
+
+export async function transformPhotoIntoCartoon(
+  input: TransformPhotoIntoCartoonInput
+): Promise<TransformPhotoIntoCartoonOutput> {
+  try {
+    return await transformPhotoIntoCartoonFlow(input);
+  } catch (err: any) {
+    console.error('[transformPhotoIntoCartoon Server Action Error]:', err);
+    return {
+      cartoonPhotoDataUri: '',
+      error: err?.message || 'Server error during cartoon transformation.',
+    };
+  }
+}

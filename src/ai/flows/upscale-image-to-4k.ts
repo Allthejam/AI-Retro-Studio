@@ -1,17 +1,9 @@
 'use server';
-/**
- * @fileOverview A Genkit flow for upscaling an image to 4K quality.
- *
- * - upscaleImageTo4K - A function that handles the image upscaling process.
- * - UpscaleImageInput - The input type for the upscaleImageTo4K function.
- * - UpscaleImageOutput - The return type for the upscaleImageTo4K function.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { googleAI } from '@genkit-ai/google-genai';
+import { resolveImageMedia } from '@/ai/media-helper';
 
-// Define the input schema
 const UpscaleImageInputSchema = z.object({
   photoUrl: z
     .string()
@@ -19,17 +11,16 @@ const UpscaleImageInputSchema = z.object({
 });
 export type UpscaleImageInput = z.infer<typeof UpscaleImageInputSchema>;
 
-// Define the output schema
 const UpscaleImageOutputSchema = z.object({
   upscaledPhotoDataUri: z
     .string()
     .describe(
       "The upscaled high-definition photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  error: z.string().optional(),
 });
 export type UpscaleImageOutput = z.infer<typeof UpscaleImageOutputSchema>;
 
-// Define the Genkit flow
 const upscaleImageTo4KFlow = ai.defineFlow(
   {
     name: 'upscaleImageTo4KFlow',
@@ -37,10 +28,12 @@ const upscaleImageTo4KFlow = ai.defineFlow(
     outputSchema: UpscaleImageOutputSchema,
   },
   async (input) => {
+    const mediaInput = await resolveImageMedia(input.photoUrl);
+
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
-        { media: { url: input.photoUrl } },
+        { media: mediaInput },
         { text: 'Perform dramatic 4K super-resolution enhancement on this image. Significantly enhance micro-details, ultra-sharp facial features, clear skin textures, sharp hair strands, crisp edges, and vivid lighting. Remove any pixelation, blur, compression artifacts, and digital noise. The resulting image must look dramatically sharper, crisper, and enhanced with cinema-grade high fidelity while keeping subject identity. Output the enhanced image as an image.' },
       ],
       config: {
@@ -63,9 +56,16 @@ const upscaleImageTo4KFlow = ai.defineFlow(
   }
 );
 
-// Export the wrapper function
 export async function upscaleImageTo4K(
   input: UpscaleImageInput
 ): Promise<UpscaleImageOutput> {
-  return upscaleImageTo4KFlow(input);
+  try {
+    return await upscaleImageTo4KFlow(input);
+  } catch (err: any) {
+    console.error('[upscaleImageTo4K Server Action Error]:', err);
+    return {
+      upscaledPhotoDataUri: '',
+      error: err?.message || 'Server error during photo upscaling.',
+    };
+  }
 }

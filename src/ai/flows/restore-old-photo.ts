@@ -1,14 +1,8 @@
 'use server';
-/**
- * @fileOverview An AI agent for restoring old photos by repairing cracks, scratches, and fading.
- *
- * - restoreOldPhoto - A function that handles the photo restoration process.
- * - RestoreOldPhotoInput - The input type for the restoreOldPhoto function.
- * - RestoreOldPhotoOutput - The return type for the restoreOldPhoto function.
- */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {resolveImageMedia} from '@/ai/media-helper';
 
 const RestoreOldPhotoInputSchema = z.object({
   photoUrl: z
@@ -23,6 +17,7 @@ const RestoreOldPhotoOutputSchema = z.object({
     .describe(
       "The restored photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  error: z.string().optional(),
 });
 export type RestoreOldPhotoOutput = z.infer<typeof RestoreOldPhotoOutputSchema>;
 
@@ -33,10 +28,12 @@ const restoreOldPhotoFlow = ai.defineFlow(
     outputSchema: RestoreOldPhotoOutputSchema,
   },
   async (input) => {
+    const mediaInput = await resolveImageMedia(input.photoUrl);
+
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
-        { media: { url: input.photoUrl } },
+        { media: mediaInput },
         {
           text: 'Perform dramatic professional photo restoration and remastering on this photo. Deeply clean any noise, blur, dust, scratches, folds, cracks, and imperfections. Sharpen facial details, hair strands, eyes, and surface textures. Enhance dynamic range, contrast, and color vibrance so the photo looks vividly remastered with ultra-clear studio-grade quality while faithfully preserving the subject identity and likeness. Output the restored photo as an image.',
         },
@@ -62,5 +59,13 @@ const restoreOldPhotoFlow = ai.defineFlow(
 );
 
 export async function restoreOldPhoto(input: RestoreOldPhotoInput): Promise<RestoreOldPhotoOutput> {
-  return restoreOldPhotoFlow(input);
+  try {
+    return await restoreOldPhotoFlow(input);
+  } catch (err: any) {
+    console.error('[restoreOldPhoto Server Action Error]:', err);
+    return {
+      restoredPhotoDataUri: '',
+      error: err?.message || 'Server error during photo restoration.',
+    };
+  }
 }

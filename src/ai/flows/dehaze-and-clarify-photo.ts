@@ -1,11 +1,8 @@
 'use server';
-/**
- * @fileOverview An AI agent for removing haze, glare, and blur from backlit outdoor photos,
- * recovering faces and details in group shots with strong sunsets or harsh backlighting.
- */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { resolveImageMedia } from '@/ai/media-helper';
 
 const DehazeAndClarifyInputSchema = z.object({
   photoUrl: z
@@ -20,6 +17,7 @@ const DehazeAndClarifyOutputSchema = z.object({
     .describe(
       "The dehazed and clarified photo as a Base64 data URI."
     ),
+  error: z.string().optional(),
 });
 export type DehazeAndClarifyOutput = z.infer<typeof DehazeAndClarifyOutputSchema>;
 
@@ -30,10 +28,12 @@ const dehazeAndClarifyFlow = ai.defineFlow(
     outputSchema: DehazeAndClarifyOutputSchema,
   },
   async (input) => {
+    const mediaInput = await resolveImageMedia(input.photoUrl);
+
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
-        { media: { url: input.photoUrl } },
+        { media: mediaInput },
         {
           text: 'Expertly enhance, dehaze, and clarify this outdoor photo with backlit sunset or sun glare over the people. ' +
             'Your tasks are:\n' +
@@ -67,5 +67,13 @@ const dehazeAndClarifyFlow = ai.defineFlow(
 export async function dehazeAndClarifyPhoto(
   input: DehazeAndClarifyInput
 ): Promise<DehazeAndClarifyOutput> {
-  return dehazeAndClarifyFlow(input);
+  try {
+    return await dehazeAndClarifyFlow(input);
+  } catch (err: any) {
+    console.error('[dehazeAndClarifyPhoto Server Action Error]:', err);
+    return {
+      dehazedPhotoDataUri: '',
+      error: err?.message || 'Server error during photo dehazing.',
+    };
+  }
 }

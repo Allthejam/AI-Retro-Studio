@@ -137,20 +137,11 @@ export default function Home() {
       return;
     }
 
-    if (!storageUrl) {
+    const effectivePhotoUrl = storageUrl || originalImagePreview;
+    if (!effectivePhotoUrl) {
       toast({
         title: 'Image Not Ready',
-        description: 'Please upload an image and wait for cloud sync to complete.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // FINAL PAYLOAD SAFETY CHECK
-    if (storageUrl.startsWith('data:')) {
-      toast({
-        title: 'Invalid Source',
-        description: 'Cannot process local image data. Please re-upload.',
+        description: 'Please upload an image first.',
         variant: 'destructive',
       });
       return;
@@ -161,27 +152,32 @@ export default function Home() {
 
     try {
       let result: any = null;
-      const input = { photoUrl: storageUrl };
+      const input = { photoUrl: effectivePhotoUrl };
       
       switch (tool) {
         case 'restore':
           result = await restoreOldPhoto(input);
+          if (result.error) throw new Error(result.error);
           setTransformedImage(result.restoredPhotoDataUri);
           break;
         case 'colorize':
           result = await colorizeBlackAndWhitePhoto(input);
+          if (result.error) throw new Error(result.error);
           setTransformedImage(result.colorizedPhotoDataUri);
           break;
         case 'upscale':
           result = await upscaleImageTo4K(input);
+          if (result.error) throw new Error(result.error);
           setTransformedImage(result.upscaledPhotoDataUri);
           break;
         case 'cartoon':
           result = await transformPhotoIntoCartoon(input);
+          if (result.error) throw new Error(result.error);
           setTransformedImage(result.cartoonPhotoDataUri);
           break;
         case 'dehaze':
           result = await dehazeAndClarifyPhoto(input);
+          if (result.error) throw new Error(result.error);
           setTransformedImage(result.dehazedPhotoDataUri);
           break;
       }

@@ -1,14 +1,8 @@
 'use server';
-/**
- * @fileOverview An AI agent for colorizing black and white photos.
- *
- * - colorizeBlackAndWhitePhoto - A function that handles the photo colorization process.
- * - ColorizeBlackAndWhitePhotoInput - The input type for the colorizeBlackAndWhitePhoto function.
- * - ColorizeBlackAndWhitePhotoOutput - The return type for the colorizeBlackAndWhitePhoto function.
- */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {resolveImageMedia} from '@/ai/media-helper';
 
 const ColorizeBlackAndWhitePhotoInputSchema = z.object({
   photoUrl: z
@@ -23,12 +17,9 @@ const ColorizeBlackAndWhitePhotoOutputSchema = z.object({
     .describe(
       "The colorized version of the photo, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  error: z.string().optional(),
 });
 export type ColorizeBlackAndWhitePhotoOutput = z.infer<typeof ColorizeBlackAndWhitePhotoOutputSchema>;
-
-export async function colorizeBlackAndWhitePhoto(input: ColorizeBlackAndWhitePhotoInput): Promise<ColorizeBlackAndWhitePhotoOutput> {
-  return colorizeBlackAndWhitePhotoFlow(input);
-}
 
 const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
   {
@@ -37,17 +28,17 @@ const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
     outputSchema: ColorizeBlackAndWhitePhotoOutputSchema,
   },
   async (input) => {
-    const {photoUrl} = input;
+    const mediaInput = await resolveImageMedia(input.photoUrl);
 
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         {
-          media: {
-            url: photoUrl,
-          },
+          media: mediaInput,
         },
-        {text: 'Colorize this photo with rich, vibrant, full-spectrum color. Transform all black, white, sepia, faded, or grayscale areas into realistic, vivid colors: natural warm skin tones, lifelike hair color, vibrant clothing, bright eyes, and richly colored background environment. Ensure the final result is a striking, full-color photograph with clear depth and vibrant saturation. Output the result as an image.'},
+        {
+          text: 'Colorize this photo with rich, vibrant, full-spectrum color. Transform all black, white, sepia, faded, or grayscale areas into realistic, vivid colors: natural warm skin tones, lifelike hair color, vibrant clothing, bright eyes, and richly colored background environment. Ensure the final result is a striking, full-color photograph with clear depth and vibrant saturation. Output the result as an image.',
+        },
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
@@ -68,3 +59,15 @@ const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
     };
   }
 );
+
+export async function colorizeBlackAndWhitePhoto(input: ColorizeBlackAndWhitePhotoInput): Promise<ColorizeBlackAndWhitePhotoOutput> {
+  try {
+    return await colorizeBlackAndWhitePhotoFlow(input);
+  } catch (err: any) {
+    console.error('[colorizeBlackAndWhitePhoto Server Action Error]:', err);
+    return {
+      colorizedPhotoDataUri: '',
+      error: err?.message || 'Server error during photo colorization.',
+    };
+  }
+}
