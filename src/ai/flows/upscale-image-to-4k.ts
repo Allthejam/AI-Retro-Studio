@@ -37,19 +37,21 @@ const upscaleImageTo4KFlow = ai.defineFlow(
     outputSchema: UpscaleImageOutputSchema,
   },
   async (input) => {
-    const { media } = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash-image'),
+    const response = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         { media: { url: input.photoUrl } },
-        { text: 'Upscale this image, enhancing its resolution, sharpness, and details to achieve a high-definition output, similar to 4K quality, without introducing distortion or artifacts. Preserve the original content and style.' },
+        { text: 'Upscale this image, enhancing its resolution, sharpness, and details to achieve a high-definition output, similar to 4K quality, without introducing distortion or artifacts. Preserve the original content and style. Output the upscaled result as an image.' },
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
     });
 
+    const media = response.media;
     if (!media || !media.url) {
-      throw new Error('Failed to upscale image: No image media returned.');
+      const reason = response.text ? `: ${response.text}` : ': No image media returned.';
+      throw new Error(`Failed to upscale image${reason}`);
     }
 
     return {

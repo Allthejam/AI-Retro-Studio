@@ -43,19 +43,21 @@ const transformPhotoIntoCartoonFlow = ai.defineFlow(
     outputSchema: TransformPhotoIntoCartoonOutputSchema,
   },
   async (input) => {
-    const { media } = await ai.generate({
+    const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         { media: { url: input.photoUrl } },
-        { text: 'Transform this photo into a stylized illustration or a cartoon-like image.' },
+        { text: 'Transform this photo into a stylized illustration or a cartoon-like image. Output the result as an image.' },
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
     });
 
+    const media = response.media;
     if (!media || !media.url) {
-      throw new Error('Failed to generate cartoonized image: No media URL returned.');
+      const reason = response.text ? `: ${response.text}` : ': No media URL returned.';
+      throw new Error(`Failed to generate cartoonized image${reason}`);
     }
 
     return {

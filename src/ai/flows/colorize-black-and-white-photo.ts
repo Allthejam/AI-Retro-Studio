@@ -39,7 +39,7 @@ const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
   async (input) => {
     const {photoUrl} = input;
 
-    const {media} = await ai.generate({
+    const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         {
@@ -47,15 +47,17 @@ const colorizeBlackAndWhitePhotoFlow = ai.defineFlow(
             url: photoUrl,
           },
         },
-        {text: 'Colorize this black and white photo, making the colors realistic and natural.'},
+        {text: 'Colorize this black and white photo, making the colors realistic and natural. Output the resulting colorized photo as an image.'},
       ],
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
       },
     });
 
+    const media = response.media;
     if (!media || !media.url) {
-      throw new Error('Failed to colorize photo: No colorized media returned.');
+      const reason = response.text ? `: ${response.text}` : ': No colorized media returned.';
+      throw new Error(`Failed to colorize photo${reason}`);
     }
 
     return {

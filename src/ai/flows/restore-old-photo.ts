@@ -33,12 +33,12 @@ const restoreOldPhotoFlow = ai.defineFlow(
     outputSchema: RestoreOldPhotoOutputSchema,
   },
   async (input) => {
-    const { media } = await ai.generate({
+    const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-image',
       prompt: [
         { media: { url: input.photoUrl } },
         {
-          text: 'Carefully analyze this old, damaged photo. Your task is to intelligently repair it by removing all cracks, scratches, and fading. Restore the image to its original, high-quality state without adding new elements or changing the original content. Maintain the original colors and composition as much as possible.',
+          text: 'Carefully analyze this old, damaged photo. Your task is to intelligently repair it by removing all cracks, scratches, and fading. Restore the image to its original, high-quality state without adding new elements or changing the original content. Maintain the original colors and composition as much as possible. Output the restored image as an image.',
         },
       ],
       config: {
@@ -46,8 +46,10 @@ const restoreOldPhotoFlow = ai.defineFlow(
       },
     });
 
+    const media = response.media;
     if (!media || !media.url) {
-      throw new Error('Failed to restore photo: no image media returned.');
+      const reason = response.text ? `: ${response.text}` : ': no image media returned.';
+      throw new Error(`Failed to restore photo${reason}`);
     }
 
     return {
