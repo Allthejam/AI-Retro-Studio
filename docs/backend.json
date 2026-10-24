@@ -1,0 +1,231 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile within the AI Retro Studio application, storing user-specific data not handled by the external authentication system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity. This typically corresponds to the user ID from the authentication system."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, obtained from the authentication system. Used for identification and communication within the app.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's preferred display name or full name."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was first created.",
+          "format": "date-time"
+        },
+        "lastActivityAt": {
+          "type": "string",
+          "description": "Timestamp indicating the user's last recorded activity or interaction within the application.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "createdAt"
+      ]
+    },
+    "Image": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Image",
+      "type": "object",
+      "description": "Represents an image uploaded by a user for AI-driven transformation, storing its metadata and original location.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Image entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who uploaded this image. (Relationship: UserProfile 1:N Image)"
+        },
+        "originalUrl": {
+          "type": "string",
+          "description": "The URL to the original uploaded image file in cloud storage.",
+          "format": "uri"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "The original filename of the uploaded image (e.g., 'my_old_photo.jpg')."
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "The size of the original image file in bytes."
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "The MIME type of the original image file (e.g., 'image/jpeg', 'image/png')."
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the image was uploaded.",
+          "format": "date-time"
+        },
+        "width": {
+          "type": "number",
+          "description": "The width of the original image in pixels."
+        },
+        "height": {
+          "type": "number",
+          "description": "The height of the original image in pixels."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "originalUrl",
+        "fileName",
+        "fileSize",
+        "mimeType",
+        "uploadedAt",
+        "width",
+        "height"
+      ]
+    },
+    "Transformation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transformation",
+      "type": "object",
+      "description": "Represents a single AI-driven image transformation applied by a user, storing details about the process, parameters, and the resulting image.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Transformation entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who initiated this transformation. (Relationship: UserProfile 1:N Transformation)"
+        },
+        "originalImageId": {
+          "type": "string",
+          "description": "Reference to the original Image entity that was transformed. (Relationship: Image 1:N Transformation)"
+        },
+        "transformedImageUrl": {
+          "type": "string",
+          "description": "The URL to the resulting transformed image file in cloud storage.",
+          "format": "uri"
+        },
+        "type": {
+          "type": "string",
+          "description": "The specific type of AI transformation applied (e.g., 'Restoration', 'Colorization', 'Upscaling', 'Cartoonization')."
+        },
+        "parameters": {
+          "type": "string",
+          "description": "A JSON string storing specific parameters used for this transformation (e.g., upscaling factor, colorization intensity, cartoon style). This string should be parsed as an object by the application to retrieve transformation settings."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the transformation was initiated.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the transformation process (e.g., 'pending', 'processing', 'completed', 'failed')."
+        },
+        "transformedFileName": {
+          "type": "string",
+          "description": "The suggested filename for the downloaded transformed image (e.g., 'my_old_photo_restored.jpg')."
+        },
+        "width": {
+          "type": "number",
+          "description": "The width of the transformed image in pixels."
+        },
+        "height": {
+          "type": "number",
+          "description": "The height of the transformed image in pixels."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "originalImageId",
+        "transformedImageUrl",
+        "type",
+        "parameters",
+        "createdAt",
+        "status",
+        "transformedFileName",
+        "width",
+        "height"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile data. Each document represents a single user's profile. Access is restricted to the owner matching the userId in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, corresponding to Firebase Authentication UIDs."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/images/{imageId}",
+        "definition": {
+          "entityName": "Image",
+          "schema": {
+            "$ref": "#/backend/entities/Image"
+          },
+          "description": "Stores metadata for original images uploaded by a user. Each image document includes a denormalized 'userId' field for authorization independence, matching the parent 'userId' in the path.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who uploaded the image."
+            },
+            {
+              "name": "imageId",
+              "description": "The unique ID of the uploaded image."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/transformations/{transformationId}",
+        "definition": {
+          "entityName": "Transformation",
+          "schema": {
+            "$ref": "#/backend/entities/Transformation"
+          },
+          "description": "Stores details about AI transformations initiated by a user. Each transformation document includes a denormalized 'userId' field for authorization independence, matching the parent 'userId' in the path. Also links to the 'originalImageId'.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who initiated the transformation."
+            },
+            {
+              "name": "transformationId",
+              "description": "The unique ID of the specific image transformation."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure utilizes a strong path-based ownership model to ensure Authorization Independence and support Queryable Access Patterns (QAPs). \n\n1.  **User Profiles (`/users/{userId}`):** Each user's profile information is stored directly under their unique ID. This allows for straightforward security rules where only the authenticated user can read or modify their own profile data (`request.auth.uid == userId`). This setup is simple and debuggable.\n\n2.  **User Images (`/users/{userId}/images/{imageId}`):** Original uploaded images are stored in a subcollection nested under the owning `UserProfile`. Each `Image` document will explicitly contain a `userId` field that matches the parent `userId` in the path. This denormalization is CRITICAL for Authorization Independence. Security rules can directly check `request.auth.uid == userId` (from the path) AND `resource.data.userId == request.auth.uid` (from the document itself) without needing a `get()` call to the parent user document. This enables atomic creation of image documents and simplifies rules significantly.\n\n3.  **User Transformations (`/users/{userId}/transformations/{transformationId}`):** Similar to images, each AI transformation is stored in its own subcollection under the owning `UserProfile`. Each `Transformation` document also explicitly contains a `userId` field matching the path's `userId`. This denormalization ensures Authorization Independence for transformations, allowing rules to directly verify ownership via `request.auth.uid == userId` and `resource.data.userId == request.auth.uid` without any hierarchical lookups. The `originalImageId` field within the `Transformation` document maintains the logical link back to the `Image` entity.\n\n**Authorization Independence via Denormalization:**\nBoth `Image` and `Transformation` entities explicitly include the `userId` in their document data. This `userId` field is guaranteed to match the `{userId}` wildcard in their respective paths (`/users/{userId}/images/{imageId}` and `/users/{userId}/transformations/{transformationId}`). This design eliminates the need for `get()` calls in security rules to check ownership against a parent document. Rules can simply verify `request.auth.uid == userId` (from the path) and `resource.data.userId == request.auth.uid` (from the document), ensuring atomic operations and simplified rule logic.\n\n**Support for Queryable Access Patterns (QAPs):**\nThis structure naturally supports QAPs. For `Image` and `Transformation` collections, `list` operations are performed on subcollections specific to the authenticated user (e.g., `/users/{request.auth.uid}/images`). Because the path itself defines the owner, and the `userId` is denormalized within each document to match this path, any `list` operation initiated by `request.auth.uid` on their respective subcollection will only retrieve documents they are authorized to access. The security rules enforce that the `userId` in the path must match `request.auth.uid` and the `userId` field in the document itself, thus preventing unauthorized access and ensuring rules act as assertions, not filters."
+  }
+}

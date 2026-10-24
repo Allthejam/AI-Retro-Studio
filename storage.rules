@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Images are publicly readable so they can be viewed and processed.
+    // Users can only upload and modify images in their own folder.
+    match /images/{userId}/{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
